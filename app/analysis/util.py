@@ -43,9 +43,9 @@ from app.constants import (
     RULE_EXTENSIONS,
     RULES_PATH,
     SCAN_LOGS_FOLDER,
-    SEMGREP,
-    SEMGREP_MAX_FILES,
-    SEMGREP_TIMEOUT,
+    OPENGREP,
+    OPENGREP_MAX_FILES,
+    OPENGREP_TIMEOUT,
     SEVERITY_CRITICAL,
     SEVERITY_HIGH,
     SEVERITY_INFO,
@@ -92,8 +92,8 @@ def async_scan(self, analysis_id):
     try:
         progress(analysis, 0)
 
-        # SAST scan: invoke semgrep
-        files_to_scan, project_rules_path, ignore = generate_semgrep_options(analysis)
+        # SAST scan: invoke opengrep
+        files_to_scan, project_rules_path, ignore = generate_opengrep_options(analysis)
         progress(analysis, 5)
         sast_scan(analysis, files_to_scan, project_rules_path, ignore)
         progress(analysis, 30)
@@ -171,41 +171,41 @@ def remove_ignored_files(files_paths, ignore):
 def sast_scan(analysis, files_to_scan, project_rules_path, ignore):
     """Run Semgrep, possibly multiple times if there is a lot of files,
     in order to avoid issues with shell limits. The maximum number of files
-    for a specific scan is defined in utils.SEMGREP_MAX_FILES.
+    for a specific scan is defined in utils.OPENGREP_MAX_FILES.
 
     Args:
-        analysis (Analysis): analysis to populate with semgrep results
+        analysis (Analysis): analysis to populate with opengrep results
         files_to_scan (list): files' paths to be scanned
-        project_rules_path (str): path to the folder with semgrep YML rules
+        project_rules_path (str): path to the folder with opengrep YML rules
         ignore (list): patterns of paths / filenames to skip
     """
-    current_app.logger.info("[Analysis %i] Starting SAST scan (semgrep)", analysis.id)
-    total_scans = int(len(files_to_scan) / SEMGREP_MAX_FILES) + 1
-    # Run semgrep multiple times if there is a lot of files to avoid issues with shell limits
-    for i in range(0, len(files_to_scan), SEMGREP_MAX_FILES):
+    current_app.logger.info("[Analysis %i] Starting SAST scan (opengrep)", analysis.id)
+    total_scans = int(len(files_to_scan) / OPENGREP_MAX_FILES) + 1
+    # Run opengrep multiple times if there is a lot of files to avoid issues with shell limits
+    for i in range(0, len(files_to_scan), OPENGREP_MAX_FILES):
         current_app.logger.info(
             "[Analysis %i] Semgrep execution %i / %i",
             analysis.id,
-            int(i / SEMGREP_MAX_FILES) + 1,
+            int(i / OPENGREP_MAX_FILES) + 1,
             total_scans,
         )
-        files_chunk = files_to_scan[i : i + SEMGREP_MAX_FILES]
-        sast_result = semgrep_invoke(files_chunk, project_rules_path, ignore)
+        files_chunk = files_to_scan[i : i + OPENGREP_MAX_FILES]
+        sast_result = opengrep_invoke(files_chunk, project_rules_path, ignore)
         # Save results on disk to allow download
         save_sast_result(analysis, sast_result, i)
         # Load results into the analysis object
         load_sast_scan_results(analysis, sast_result)
         current_app.logger.info(
-            "[Analysis %i] SAST scan (semgrep) finished", analysis.id
+            "[Analysis %i] SAST scan (opengrep) finished", analysis.id
         )
 
 
-def semgrep_invoke(files_to_scan, project_rules_path, ignore):
-    """Launch a semgrep scan.
+def opengrep_invoke(files_to_scan, project_rules_path, ignore):
+    """Launch a opengrep scan.
 
     Args:
         files_to_scan (list): files' paths to be scanned
-        project_rules_path (str): path to the folder with semgrep YML rules
+        project_rules_path (str): path to the folder with opengrep YML rules
         ignore (list): patterns of paths / filenames to skip
 
     Returns:
@@ -216,7 +216,7 @@ def semgrep_invoke(files_to_scan, project_rules_path, ignore):
         return ""
     result = ""
     cmd = [
-        SEMGREP,
+        OPENGREP,
         "scan",
         "--config",
         project_rules_path,
@@ -224,16 +224,15 @@ def semgrep_invoke(files_to_scan, project_rules_path, ignore):
         "--disable-nosem",
         "--json",
     ] + files_to_scan
-
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=SEMGREP_TIMEOUT
+            cmd, capture_output=True, text=True, timeout=OPENGREP_TIMEOUT
         ).stdout
     # Other exceptions will be catched in async_scan()
     except subprocess.TimeoutExpired:
         current_app.logger.warning(
             "Semgrep scan was cancelled because exceeding defined timeout (%i seconds)",
-            SEMGREP_TIMEOUT,
+            OPENGREP_TIMEOUT,
         )
 
     return result
@@ -253,32 +252,32 @@ def save_sast_result(analysis, sast_result, step):
         f"sast_report_{step}.json",
     )
     current_app.logger.info(
-        "[Analysis %i] Saving semgrep results on disk: %s", analysis.id, filename
+        "[Analysis %i] Saving opengrep results on disk: %s", analysis.id, filename
     )
     f = open(filename, "a")
     f.write(sast_result)
     f.close()
 
 
-def load_sast_scan_results(analysis, semgrep_output):
+def load_sast_scan_results(analysis, opengrep_output):
     """Populate an Analysis object with the result of a Semgrep scan.
 
     Args:
         analysis (Analysis): corresponding analysis
-        semgrep_output (str): Semgrep JSON output as string
+        opengrep_output (str): Semgrep JSON output as string
     """
     # vulns = list()
     current_app.logger.info(
-        "[Analysis %i] Loading semgrep results in database", analysis.id
+        "[Analysis %i] Loading opengrep results in database", analysis.id
     )
-    if semgrep_output != "":
-        json_result = json.loads(semgrep_output)
+    if opengrep_output != "":
+        json_result = json.loads(opengrep_output)
         if json_result is not None:
             # Ignore errors, focus on results
             if "results" in json_result:
                 results = json_result["results"]
                 current_app.logger.info(
-                    "[Analysis %i] Found %i semgrep results", analysis.id, len(results)
+                    "[Analysis %i] Found %i opengrep results", analysis.id, len(results)
                 )
                 for c_result in results:
                     title = c_result["check_id"].split(".")[-1]
@@ -296,7 +295,7 @@ def load_sast_scan_results(analysis, semgrep_output):
 
 
 def load_vulnerability(title, sast_result):
-    """Create a vulnerability object from a 'result' element of semgrep JSON results.
+    """Create a vulnerability object from a 'result' element of opengrep JSON results.
 
     Args:
         title (string): finding's title
@@ -339,7 +338,7 @@ def load_vulnerability(title, sast_result):
 
 
 def load_occurence(sast_result):
-    """Create an occurence object from a 'result' element of semgrep JSON results.
+    """Create an occurence object from a 'result' element of opengrep JSON results.
 
     Args:
         sast_result (dict): 'result' elements with its properties
@@ -401,18 +400,18 @@ def load_occurence(sast_result):
     return occurence
 
 
-def generate_semgrep_options(analysis):
-    """Generate semgrep options depending on the attributes of an analysis.
+def generate_opengrep_options(analysis):
+    """Generate opengrep options depending on the attributes of an analysis.
 
     Args:
         analysis (Analysis): generate options for this analysis and parent project
 
     Returns:
         files_to_scan (list): files' paths to be scanned
-        project_rules_path (str): path to the folder with semgrep YML rules
+        project_rules_path (str): path to the folder with opengrep YML rules
         ignore (list): patterns of paths / filenames to skip
     """
-    current_app.logger.info("[Analysis %i] Setting up semgrep options", analysis.id)
+    current_app.logger.info("[Analysis %i] Setting up opengrep options", analysis.id)
     # Define the scan path
     scan_path = os.path.join(
         PROJECTS_SRC_PATH, str(analysis.project.id), EXTRACT_FOLDER_NAME

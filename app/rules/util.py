@@ -43,12 +43,12 @@ def get_languages_names():
 
 
 def sync_db(rules_folder):
-    """Parse all semgrep YAML rule files in the given folder, and for each
+    """Parse all opengrep YAML rule files in the given folder, and for each
     rule create new a Rule object and persist it in the database. Existing rules ID
     are kept to preserve rule packs consistency.
 
     Args:
-        rules_folder (str): path of the folder containing semgrep YAML rule files
+        rules_folder (str): path of the folder containing opengrep YAML rule files
     """
     # Get all YML files in the folder
     rules_filenames = list()
