@@ -11,7 +11,7 @@ SAST (Static Analysis Security Testing) capabilities:
 - Multiple languages support: C/C++, C#, Go, HTML, Java, Kotlin, JavaScript, TypeScript, OCaml, PHP, Python, Ruby, Bash, Rust, Scala, Solidity, Terraform, Swift
 - Multiple frameworks support: Spring, Laravel, Symfony, Django, Flask, Node.js, jQuery, Express, Angular...
 - 1600+ existing analysis rules
-- Easily extend analysis rules using Semgrep syntax: https://opengrep.dev/editor
+- Easily extend analysis rules using Opengrep syntax: https://opengrep.dev/editor
 - Manage rules in rule packs to tailor code scanning
 
 SCA (Software Composition Analysis) capabilities:
@@ -81,16 +81,16 @@ Visit `http://localhost:8001` in your browser. The app should be up & running.
 
 ## Add rule repositories
 
-In order to run a scan you will need to manually add at least one entry in `Administration/Repository`. Here are a few examples of Semgrep rule repositories which can be used:
+In order to run a scan you will need to manually add at least one entry in `Administration/Repository`. Here are a few examples of Opengrep rule repositories which can be used:
 
-- `https://github.com/opengrep/opengrep-rules`: the standard library for Semgrep rules
-- `https://github.com/patched-codes/opengrep-rules`: a collection of permissively licensed Semgrep rules
+- `https://github.com/opengrep/opengrep-rules`: the standard library for Opengrep rules
+- `https://github.com/patched-codes/opengrep-rules`: a collection of permissively licensed Opengrep rules
 - `https://github.com/trailofbits/opengrep-rules`: opengrep rules developed by Trail of Bits
 - `https://github.com/Decurity/opengrep-smart-contracts`: opengrep rules that look for patterns of vulnerabilities in smart contracts
 - `https://github.com/0xdea/opengrep-rules`: opengrep rules by 0xdea
-- `https://github.com/mindedsecurity/opengrep-rules-android-security`: Semgrep rules derived from the OWASP MASTG specifically for Android applications
-- `https://github.com/akabe1/akabe1-opengrep-rules`: collection of akabe1's custom Semgrep rules
-- `https://github.com/s0rcy/opengrep-rules`: collection of s0rcy's personal Semgrep rules for security analysis and research
+- `https://github.com/mindedsecurity/opengrep-rules-android-security`: Opengrep rules derived from the OWASP MASTG specifically for Android applications
+- `https://github.com/akabe1/akabe1-opengrep-rules`: collection of akabe1's custom Opengrep rules
+- `https://github.com/s0rcy/opengrep-rules`: collection of s0rcy's personal Opengrep rules for security analysis and research
 
 **Make sure you agree & comply with the LICENSE file of the rules repositories you use!**
 
