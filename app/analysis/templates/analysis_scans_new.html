@@ -134,6 +134,19 @@
                                     </div>
                                 {% endfor %}
                             </div>
+                            <label class="form-label">Select scans modes</label>
+                            <div class="row">
+                                {% for scan_id, scan_label in form.scans.choices %}
+                                    <div class="col-md-3 mb-3">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="{{ scan_id }}" name="scans" value="{{ scan_id }}" {% if scan_id in form.scans.data %}checked{% endif %}>
+                                            <label class="custom-control-label" for="{{ scan_id }}">
+                                                {{ scan_label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
                             <div class="row">
                                 <div class="col-md-12 mb-3">
                                     <div>

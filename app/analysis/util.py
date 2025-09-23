@@ -69,7 +69,7 @@ from app.rules.util import generate_severity
 
 
 @celery.task(name="grepmarx-scan", bind=True)
-def async_scan(self, analysis_id):
+def async_scan(self, analysis_id, scans):
     """Launch a new code scan on the project corresponding to the given analysis ID, asynchronously through celery.
 
     Args:
@@ -84,30 +84,37 @@ def async_scan(self, analysis_id):
     analysis.task_id = self.request.id
     db.session.commit()
     current_app.logger.info(
-        "[Analysis %i] New analysis started for project '%s' (project id=%i)",
+        "[Analysis %i] New analysis started for project '%s' (project id=%i), scan = %s",
         analysis.id,
         analysis.project.name,
         analysis.project.id,
+        scans[0],
     )
     try:
         progress(analysis, 0)
+    
+        # SAST scan: invoke opengrep if scan selected
+        if "SAST" in scans :
+            current_app.logger.info("SAST Launched ! -------------------------------------")
+            files_to_scan, project_rules_path, ignore = generate_opengrep_options(analysis)
+            progress(analysis, 5)
+            sast_scan(analysis, files_to_scan, project_rules_path, ignore)
+            progress(analysis, 30)
 
-        # SAST scan: invoke opengrep
-        files_to_scan, project_rules_path, ignore = generate_opengrep_options(analysis)
-        progress(analysis, 5)
-        sast_scan(analysis, files_to_scan, project_rules_path, ignore)
-        progress(analysis, 30)
+        # SCA scan: invoke depscan if scan selected
+        if "SCA" in scans :
+            current_app.logger.info("SCA Launched ! -------------------------------------")
+            sca_result = sca_scan(analysis)
+            progress(analysis, 60)
+            load_sca_scan_results(analysis, sca_result)
+            progress(analysis, 70)
 
-        # SCA scan: invoke depscan
-        sca_result = sca_scan(analysis)
-        progress(analysis, 60)
-        load_sca_scan_results(analysis, sca_result)
-        progress(analysis, 70)
-
-        # Inspector scan: invoke ApplicationInspector
-        inspector_result = inspector_scan(analysis)
-        progress(analysis, 80)
-        load_inspector_results(analysis, inspector_result)
+        # Inspector scan: invoke ApplicationInspector if scan selected
+        if "Appinspector" in scans :
+            current_app.logger.info("Appinspector Launched ! -------------------------------------")
+            inspector_result = inspector_scan(analysis)
+            progress(analysis, 80)
+            load_inspector_results(analysis, inspector_result)
 
         progress(analysis, 100)
         analysis.project.status = STATUS_FINISHED
@@ -169,7 +176,7 @@ def remove_ignored_files(files_paths, ignore):
 
 
 def sast_scan(analysis, files_to_scan, project_rules_path, ignore):
-    """Run Semgrep, possibly multiple times if there is a lot of files,
+    """Run Opengrep, possibly multiple times if there is a lot of files,
     in order to avoid issues with shell limits. The maximum number of files
     for a specific scan is defined in utils.OPENGREP_MAX_FILES.
 
@@ -184,7 +191,7 @@ def sast_scan(analysis, files_to_scan, project_rules_path, ignore):
     # Run opengrep multiple times if there is a lot of files to avoid issues with shell limits
     for i in range(0, len(files_to_scan), OPENGREP_MAX_FILES):
         current_app.logger.info(
-            "[Analysis %i] Semgrep execution %i / %i",
+            "[Analysis %i] Opengrep execution %i / %i",
             analysis.id,
             int(i / OPENGREP_MAX_FILES) + 1,
             total_scans,
@@ -209,7 +216,7 @@ def opengrep_invoke(files_to_scan, project_rules_path, ignore):
         ignore (list): patterns of paths / filenames to skip
 
     Returns:
-        [str]: Semgrep JSON output
+        [str]: Opengrep JSON output
     """
     files_to_scan = remove_ignored_files(files_to_scan, ignore)
     if len(files_to_scan) <= 0:
@@ -231,7 +238,7 @@ def opengrep_invoke(files_to_scan, project_rules_path, ignore):
     # Other exceptions will be catched in async_scan()
     except subprocess.TimeoutExpired:
         current_app.logger.warning(
-            "Semgrep scan was cancelled because exceeding defined timeout (%i seconds)",
+            "Opengrep scan was cancelled because exceeding defined timeout (%i seconds)",
             OPENGREP_TIMEOUT,
         )
 
@@ -239,11 +246,11 @@ def opengrep_invoke(files_to_scan, project_rules_path, ignore):
 
 
 def save_sast_result(analysis, sast_result, step):
-    """Save Semgrep JSON results as a file in the project's directory.
+    """Save Opengrep JSON results as a file in the project's directory.
 
     Args:
         analysis (Analysis): corresponding analysis
-        sast_result (str): Semgrep JSON results as string
+        sast_result (str): Opengrep JSON results as string
     """
     filename = os.path.join(
         PROJECTS_SRC_PATH,
@@ -260,11 +267,11 @@ def save_sast_result(analysis, sast_result, step):
 
 
 def load_sast_scan_results(analysis, opengrep_output):
-    """Populate an Analysis object with the result of a Semgrep scan.
+    """Populate an Analysis object with the result of a Opengrep scan.
 
     Args:
         analysis (Analysis): corresponding analysis
-        opengrep_output (str): Semgrep JSON output as string
+        opengrep_output (str): Opengrep JSON output as string
     """
     # vulns = list()
     current_app.logger.info(

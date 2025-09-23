@@ -65,7 +65,6 @@ from app.rules.models import RulePack
 # Scans
 #
 
-
 @blueprint.route("/analysis/scans/new/<project_id>")
 @login_required
 def scans_new(project_id, scan_form=None):
@@ -75,6 +74,12 @@ def scans_new(project_id, scan_form=None):
     # Dynamically adds choices for multiple selection fields
     scan_form.rule_packs.choices = ((rp.id, rp.name) for rp in RulePack.query.all())
     # Rule packs preselection depending on the project's detected languages
+    scan_form.scans.choices = [
+        ("SAST" , "SAST"),
+        ("SCA" , "SCA"),
+        ("Appinspector" , "Appinspector")
+    ]
+    scan_form.scans.data = ["SAST", "SCA", "Appinspector"]
     project_languages = [
         llc.language for llc in project.project_lines_count.language_lines_counts
     ]
@@ -108,6 +113,12 @@ def scans_launch():
         return render_template("403.html"), 403
     # Dynamically adds choices for multiple selection fields
     scan_form.rule_packs.choices = list((rp.id, rp.name) for rp in RulePack.query.all())
+    scan_form.scans.choices = [
+        ("SAST" , "SAST"),
+        ("SCA" , "SCA"),
+        ("Appinspector" , "Appinspector")
+    ]
+
     # Form is valid
     if scan_form.validate_on_submit():
         # Need at least one rule pack
@@ -143,7 +154,7 @@ def scans_launch():
         project.analysis.project.status = STATUS_ANALYZING
         progress(project.analysis, -1) # -1 is pending state
         current_app.logger.info("New analysis queued (project.id=%i)", project.id)
-        async_scan.delay(project.analysis.id)
+        async_scan.delay(analysis_id=project.analysis.id, scans=scan_form.scans.data)
         flash("Analysis successfully launched", "success")
         return redirect(url_for("projects_blueprint.projects_list"))
     # Form is not valid, form.error is populated

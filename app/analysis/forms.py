@@ -23,3 +23,4 @@ class ScanForm(FlaskForm):
     ignore_paths = TextAreaField("Ignore paths", id="scan-ignore-paths")
     ignore_filenames = TextAreaField("Ignore files", id="scan-ignore-files", default=IGNORE_LIST)
     rule_packs = MultiCheckboxField("Rule packs", coerce=int)
+    scans = MultiCheckboxField("Scans", id="scans")
