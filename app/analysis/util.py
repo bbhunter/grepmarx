@@ -95,7 +95,6 @@ def async_scan(self, analysis_id, scans):
     
         # SAST scan: invoke opengrep if scan selected
         if "SAST" in scans :
-            current_app.logger.info("SAST Launched ! -------------------------------------")
             files_to_scan, project_rules_path, ignore = generate_opengrep_options(analysis)
             progress(analysis, 5)
             sast_scan(analysis, files_to_scan, project_rules_path, ignore)
@@ -103,7 +102,6 @@ def async_scan(self, analysis_id, scans):
 
         # SCA scan: invoke depscan if scan selected
         if "SCA" in scans :
-            current_app.logger.info("SCA Launched ! -------------------------------------")
             sca_result = sca_scan(analysis)
             progress(analysis, 60)
             load_sca_scan_results(analysis, sca_result)
@@ -111,7 +109,6 @@ def async_scan(self, analysis_id, scans):
 
         # Inspector scan: invoke ApplicationInspector if scan selected
         if "Appinspector" in scans :
-            current_app.logger.info("Appinspector Launched ! -------------------------------------")
             inspector_result = inspector_scan(analysis)
             progress(analysis, 80)
             load_inspector_results(analysis, inspector_result)
