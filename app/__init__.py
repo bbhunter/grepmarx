@@ -56,7 +56,7 @@ def create_app(config):
     # Configure Celery
     celery.config_from_object(config)
     celery.conf.update(app.config)
-
+    print(celery.conf)
     # Register modules
     register_extensions(app)
     register_blueprints(app)

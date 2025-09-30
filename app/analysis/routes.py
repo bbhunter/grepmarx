@@ -44,6 +44,14 @@ from app.analysis.util import (
     progress,
     stop_analysis,
     vulnerabilities_sorted_by_severity,
+    set_scan_max,
+    get_scan_max,
+    add_current_scan,
+    remove_current_scan,
+    get_current_scans,
+    add_pending_scan,
+    get_pending_scan,
+    delete_scan,
 )
 from app.base import util
 from app.constants import (
@@ -118,9 +126,12 @@ def scans_launch():
         ("SCA" , "SCA"),
         ("Appinspector" , "Appinspector")
     ]
-
     # Form is valid
     if scan_form.validate_on_submit():
+        # #check scan count
+        # if get_scan_max() >= get_current_scans().len():
+        #     flash("There is actually to many scan in the same time, this scan is on waiting list.", "info")
+        #     return scans_new(project_id=project.id, scan_form=scan_form)
         # Need at least one rule pack
         if len(scan_form.rule_packs.data) <= 0:
             flash("At least one rule pack should be selected", "error")

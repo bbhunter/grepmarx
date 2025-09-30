@@ -149,8 +149,11 @@ $ # export FLASK_ENV=development
 
 > Start the celery worker process
 
+Change concurrency for increase the simultaneous scans number
+
 ```bash
-$ celery -A app.celery_worker.celery worker --pool=prefork --loglevel=info --detach
+$ celery -A app.celery_worker.celery worker --pool=prefork --loglevel=info --detach --concurrency=1 -Q scans
+
 ```
 
 > Start the application (development mode)

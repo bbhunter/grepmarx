@@ -15,6 +15,7 @@ from glob import glob
 from shutil import copyfile, rmtree
 import subprocess
 import traceback
+import redis
 
 from flask import current_app
 
@@ -68,7 +69,7 @@ from app.rules.util import generate_severity
 ##
 
 
-@celery.task(name="grepmarx-scan", bind=True)
+@celery.task(name="grepmarx-scan", bind=True, queue='scans')
 def async_scan(self, analysis_id, scans):
     """Launch a new code scan on the project corresponding to the given analysis ID, asynchronously through celery.
 
@@ -84,11 +85,10 @@ def async_scan(self, analysis_id, scans):
     analysis.task_id = self.request.id
     db.session.commit()
     current_app.logger.info(
-        "[Analysis %i] New analysis started for project '%s' (project id=%i), scan = %s",
+        "[Analysis %i] New analysis started for project '%s' (project id=%i)",
         analysis.id,
         analysis.project.name,
         analysis.project.id,
-        scans[0],
     )
     try:
         progress(analysis, 0)
@@ -139,7 +139,6 @@ def async_scan(self, analysis_id, scans):
         analysis.project.name,
         analysis.project.id,
     )
-
 
 def stop_analysis(analysis):
     task_id = analysis.task_id
