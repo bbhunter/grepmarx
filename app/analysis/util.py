@@ -70,7 +70,7 @@ from app.rules.util import generate_severity
 
 
 @celery.task(name="grepmarx-scan", bind=True, queue='scans')
-def async_scan(self, analysis_id, scans):
+def async_scan(self, analysis_id, scans, exports):
     """Launch a new code scan on the project corresponding to the given analysis ID, asynchronously through celery.
 
     Args:
@@ -97,7 +97,7 @@ def async_scan(self, analysis_id, scans):
         if "SAST" in scans :
             files_to_scan, project_rules_path, ignore = generate_opengrep_options(analysis)
             progress(analysis, 5)
-            sast_scan(analysis, files_to_scan, project_rules_path, ignore)
+            sast_scan(analysis, files_to_scan, project_rules_path, ignore, exports)
             progress(analysis, 30)
 
         # SCA scan: invoke depscan if scan selected
@@ -171,7 +171,7 @@ def remove_ignored_files(files_paths, ignore):
     return result
 
 
-def sast_scan(analysis, files_to_scan, project_rules_path, ignore):
+def sast_scan(analysis, files_to_scan, project_rules_path, ignore, exports):
     """Run Opengrep, possibly multiple times if there is a lot of files,
     in order to avoid issues with shell limits. The maximum number of files
     for a specific scan is defined in utils.OPENGREP_MAX_FILES.
@@ -193,17 +193,33 @@ def sast_scan(analysis, files_to_scan, project_rules_path, ignore):
             total_scans,
         )
         files_chunk = files_to_scan[i : i + OPENGREP_MAX_FILES]
-        sast_result = opengrep_invoke(files_chunk, project_rules_path, ignore)
+        sast_result_json = opengrep_invoke_json(files_chunk, project_rules_path, ignore)
+        ## if sarif select start scan with sarif export 
+        if "SARIF" in exports:
+            sast_result_sarif = opengrep_invoke_sarif(files_chunk, project_rules_path, ignore)
+        ## if text select start scan with sarif export 
+        if "TEXT" in exports:
+            sast_result_text = opengrep_invoke_text(files_chunk, project_rules_path, ignore)
+
+        if exports is not [] :
+            additional_stat_scan_export(files_chunk, project_rules_path, ignore, exports) 
         # Save results on disk to allow download
-        save_sast_result(analysis, sast_result, i)
+        save_sast_result_json(analysis, sast_result_json, i)
+        ## if sarif select save sarif export 
+        if "SARIF" in exports:
+            save_sast_result_sarif(analysis, sast_result_sarif, i)
+        ## if text select save sarif export 
+        if "TEXT" in exports:
+            save_sast_result_text(analysis, sast_result_text, i)
+
         # Load results into the analysis object
-        load_sast_scan_results(analysis, sast_result)
+        load_sast_scan_results(analysis, sast_result_json)
         current_app.logger.info(
             "[Analysis %i] SAST scan (opengrep) finished", analysis.id
         )
 
 
-def opengrep_invoke(files_to_scan, project_rules_path, ignore):
+def opengrep_invoke_json(files_to_scan, project_rules_path, ignore):
     """Launch a opengrep scan.
 
     Args:
@@ -240,8 +256,84 @@ def opengrep_invoke(files_to_scan, project_rules_path, ignore):
 
     return result
 
+def opengrep_invoke_sarif(files_to_scan, project_rules_path, ignore):
+    """Launch a opengrep scan.
 
-def save_sast_result(analysis, sast_result, step):
+    Args:
+        files_to_scan (list): files' paths to be scanned
+        project_rules_path (str): path to the folder with opengrep YML rules
+        ignore (list): patterns of paths / filenames to skip
+
+    Returns:
+        [str]: Opengrep SARIF output
+    """
+    files_to_scan = remove_ignored_files(files_to_scan, ignore)
+    if len(files_to_scan) <= 0:
+        return ""
+    result = ""
+    cmd = [
+        OPENGREP,
+        "scan",
+        "--config",
+        project_rules_path,
+        "--dataflow-traces",
+        "--disable-nosem",
+        "--sarif",
+        "--sarif-output=semgrep.sarif",
+    ] + files_to_scan
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=OPENGREP_TIMEOUT
+        ).stdout
+    # Other exceptions will be catched in async_scan()
+    except subprocess.TimeoutExpired:
+        current_app.logger.warning(
+            "Opengrep scan was cancelled because exceeding defined timeout (%i seconds)",
+            OPENGREP_TIMEOUT,
+        )
+
+    return result
+
+def opengrep_invoke_text(files_to_scan, project_rules_path, ignore):
+    """Launch a opengrep scan.
+
+    Args:
+        files_to_scan (list): files' paths to be scanned
+        project_rules_path (str): path to the folder with opengrep YML rules
+        ignore (list): patterns of paths / filenames to skip
+
+    Returns:
+        [str]: Opengrep TEXT output
+    """
+    files_to_scan = remove_ignored_files(files_to_scan, ignore)
+    if len(files_to_scan) <= 0:
+        return ""
+    result = ""
+    cmd = [
+        OPENGREP,
+        "scan",
+        "--config",
+        project_rules_path,
+        "--dataflow-traces",
+        "--disable-nosem",
+        "--text",
+        "--text-output=semgrep.txt",
+    ] + files_to_scan
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=OPENGREP_TIMEOUT
+        ).stdout
+    # Other exceptions will be catched in async_scan()
+    except subprocess.TimeoutExpired:
+        current_app.logger.warning(
+            "Opengrep scan was cancelled because exceeding defined timeout (%i seconds)",
+            OPENGREP_TIMEOUT,
+        )
+
+    return result
+
+
+def save_sast_result_json(analysis, sast_result, step):
     """Save Opengrep JSON results as a file in the project's directory.
 
     Args:
@@ -253,6 +345,46 @@ def save_sast_result(analysis, sast_result, step):
         str(analysis.project.id),
         RESULT_FOLDER,
         f"sast_report_{step}.json",
+    )
+    current_app.logger.info(
+        "[Analysis %i] Saving opengrep results on disk: %s", analysis.id, filename
+    )
+    f = open(filename, "a")
+    f.write(sast_result)
+    f.close()
+
+def save_sast_result_sarif(analysis, sast_result, step):
+    """Save Opengrep SARIF results as a file in the project's directory.
+
+    Args:
+        analysis (Analysis): corresponding analysis
+        sast_result (str): Opengrep SARIF results as string
+    """
+    filename = os.path.join(
+        PROJECTS_SRC_PATH,
+        str(analysis.project.id),
+        RESULT_FOLDER,
+        f"sast_report_{step}.sarif",
+    )
+    current_app.logger.info(
+        "[Analysis %i] Saving opengrep results on disk: %s", analysis.id, filename
+    )
+    f = open(filename, "a")
+    f.write(sast_result)
+    f.close()
+
+def save_sast_result_text(analysis, sast_result, step):
+    """Save Opengrep TEXT results as a file in the project's directory.
+
+    Args:
+        analysis (Analysis): corresponding analysis
+        sast_result (str): Opengrep TEXT results as string
+    """
+    filename = os.path.join(
+        PROJECTS_SRC_PATH,
+        str(analysis.project.id),
+        RESULT_FOLDER,
+        f"sast_report_{step}.text",
     )
     current_app.logger.info(
         "[Analysis %i] Saving opengrep results on disk: %s", analysis.id, filename

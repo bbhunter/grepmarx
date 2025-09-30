@@ -147,6 +147,19 @@
                                     </div>
                                 {% endfor %}
                             </div>
+                             <label class="form-label">Select export modes (SAST)</label>
+                            <div class="row">
+                                {% for export_id, export_label in form.exports.choices %}
+                                    <div class="col-md-3 mb-3">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="{{ export_id }}" name="exports" value="{{ export_id }}" {% if export_id in form.exports.data %}checked{% endif %}>
+                                            <label class="custom-control-label" for="{{ export_id }}">
+                                                {{ export_label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
                             <div class="row">
                                 <div class="col-md-12 mb-3">
                                     <div>

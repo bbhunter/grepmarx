@@ -44,14 +44,6 @@ from app.analysis.util import (
     progress,
     stop_analysis,
     vulnerabilities_sorted_by_severity,
-    set_scan_max,
-    get_scan_max,
-    add_current_scan,
-    remove_current_scan,
-    get_current_scans,
-    add_pending_scan,
-    get_pending_scan,
-    delete_scan,
 )
 from app.base import util
 from app.constants import (
@@ -88,6 +80,11 @@ def scans_new(project_id, scan_form=None):
         ("Appinspector" , "Appinspector")
     ]
     scan_form.scans.data = ["SAST", "SCA", "Appinspector"]
+    scan_form.exports.choices = [
+        ("SARIF", "SARIF"),
+        ("TEXT", "TEXT"),
+        ]
+    scan_form.exports.data = []
     project_languages = [
         llc.language for llc in project.project_lines_count.language_lines_counts
     ]
@@ -126,12 +123,12 @@ def scans_launch():
         ("SCA" , "SCA"),
         ("Appinspector" , "Appinspector")
     ]
+    scan_form.exports.choices = [
+        ("SARIF", "SARIF"),
+        ("TEXT", "TEXT"),
+        ]
     # Form is valid
     if scan_form.validate_on_submit():
-        # #check scan count
-        # if get_scan_max() >= get_current_scans().len():
-        #     flash("There is actually to many scan in the same time, this scan is on waiting list.", "info")
-        #     return scans_new(project_id=project.id, scan_form=scan_form)
         # Need at least one rule pack
         if len(scan_form.rule_packs.data) <= 0:
             flash("At least one rule pack should be selected", "error")
@@ -165,7 +162,7 @@ def scans_launch():
         project.analysis.project.status = STATUS_ANALYZING
         progress(project.analysis, -1) # -1 is pending state
         current_app.logger.info("New analysis queued (project.id=%i)", project.id)
-        async_scan.delay(analysis_id=project.analysis.id, scans=scan_form.scans.data)
+        async_scan.delay(analysis_id=project.analysis.id, scans=scan_form.scans.data, exports=scan_form.exports.data)
         flash("Analysis successfully launched", "success")
         return redirect(url_for("projects_blueprint.projects_list"))
     # Form is not valid, form.error is populated
