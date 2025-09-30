@@ -200,9 +200,6 @@ def sast_scan(analysis, files_to_scan, project_rules_path, ignore, exports):
         ## if text select start scan with sarif export 
         if "TEXT" in exports:
             sast_result_text = opengrep_invoke_text(files_chunk, project_rules_path, ignore)
-
-        if exports is not [] :
-            additional_stat_scan_export(files_chunk, project_rules_path, ignore, exports) 
         # Save results on disk to allow download
         save_sast_result_json(analysis, sast_result_json, i)
         ## if sarif select save sarif export 
@@ -384,7 +381,7 @@ def save_sast_result_text(analysis, sast_result, step):
         PROJECTS_SRC_PATH,
         str(analysis.project.id),
         RESULT_FOLDER,
-        f"sast_report_{step}.text",
+        f"sast_report_{step}.txt",
     )
     current_app.logger.info(
         "[Analysis %i] Saving opengrep results on disk: %s", analysis.id, filename
