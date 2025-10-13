@@ -169,11 +169,16 @@ that could compromise the confidentiality, integrity, or availability of the sys
                                                 Inspector
                                             </a>
                                         </div>
-
+                                        <span class="fas fa-download"></span>
                                         <a class="btn btn-light btn-sm" data-toggle="modal"
                                             data-target="#confirm-xls-export">
                                             <span title="Export results as XLS" class="fas fa-file-excel"></span>
-                                            Export results as XLS
+                                            XLS
+                                        </a>
+                                        <a class="btn btn-light btn-sm" data-toggle="modal"
+                                            href="/projects/{{ project.id }}/download_sarif_export">
+                                            <span title="Export results as SARIF" class="fas fa-file"></span>
+                                            SARIF
                                         </a>
                                     </div>
                                 </div>

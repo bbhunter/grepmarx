@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import os
 import pathlib
+import glob
 
 from zipfile import BadZipFile, ZipFile
 
@@ -28,6 +29,7 @@ from app.constants import (
     LANGUAGES_DEVICONS,
     PROJECTS_SRC_PATH,
     SCAN_LOGS_FOLDER,
+    SCAN_EXPORTS_FOLDER,
 )
 from app.base import util
 from app.projects import blueprint
@@ -247,3 +249,45 @@ def download_analysis_logs(project_id):
         return redirect(url_for("projects_blueprint.projects_list"))
     # Return generated file to the browser
     return send_file(log_file, as_attachment=True)
+
+@blueprint.route("/projects/<project_id>/download_sarif_export")
+@login_required
+def download_analysis_sarif_export(project_id):
+    project = Project.query.filter_by(id=project_id).first_or_404()
+    # Check if the user has access to the project
+    if not has_access(current_user, project):
+        return render_template("403.html"), 403
+    # Path to the exort files
+    merged_files = []
+    version = None
+    schema = None
+    # Create the file path
+    export_file_path = os.path.join(os.getcwd(), PROJECTS_SRC_PATH, str(project.id), SCAN_EXPORTS_FOLDER)
+    # if there is no file return the good message and url
+
+    file_paths = glob.glob(export_file_path + "/sast_report_*.sarif")
+
+    if file_paths == None :
+        flash("No sarif export files found for this project.", "error")
+        return redirect(url_for("projects_blueprint.projects_list"))
+
+    for file_path in file_paths :
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if not version:
+                version = data.get('version', '2.1.0')
+            if not schema :
+                schema = data.get('$schema', 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json')
+        merged_files.extend(data['runs'])
+
+    merged_sarif = {
+        "version": version,
+        "$schema": schema,
+        "runs": merged_files,
+    }
+    merge_path = os.path.join(os.getcwd(), PROJECTS_SRC_PATH, str(project.id), SCAN_EXPORTS_FOLDER, "merged_sast_report.sarif")
+    with open(merge_path, 'w', encoding='utf-8') as f:
+        json.dump(merged_sarif, f, indent=2)
+    
+    flash("All files founded and fusionned.", "success")
+    return send_file(merge_path, as_attachment=True)

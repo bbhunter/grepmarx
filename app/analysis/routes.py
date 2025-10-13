@@ -82,7 +82,6 @@ def scans_new(project_id, scan_form=None):
     scan_form.scans.data = ["SAST", "SCA", "Appinspector"]
     scan_form.exports.choices = [
         ("SARIF", "SARIF"),
-        ("TEXT", "TEXT"),
         ]
     scan_form.exports.data = []
     project_languages = [
