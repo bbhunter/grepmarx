@@ -6,6 +6,7 @@ Copyright (c) 2021 - present Orange Cyberdefense
 import json
 import os
 import time
+import csv
 
 import chardet
 from flask import (
@@ -61,10 +62,7 @@ from app.projects.models import Project
 from app.projects.util import has_access, top_language_lines_counts
 from app.rules.models import RulePack
 
-#
-# Scans
-#
-
+ 
 @blueprint.route("/analysis/scans/new/<project_id>")
 @login_required
 def scans_new(project_id, scan_form=None):
@@ -450,6 +448,33 @@ def analysis_dependencies_export_csv(analysis_id):
     output.headers["Content-type"] = "text/csv"
     return output
 
+
+@blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
+@login_required
+def analysis_dependencies_export_md(analysis_id):
+    analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
+    # Check if the user has access to the project
+    if not has_access(current_user, analysis.project):
+        return render_template("403.html"), 403
+    
+    markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
+                        "|----|---|--|--|--|--|------|\n")
+
+    for vuln_dep in analysis.vulnerable_dependencies:
+        # remplace comma
+        source_files = vuln_dep.source_files.replace(",", "<br>")
+
+        # COnstruct Md table line
+        line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
+        markdown_content += line
+
+    markdown_content += (f":Dépendances vulnérables")
+
+    output = make_response(markdown_content)
+    filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
+    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    output.headers["Content-type"] = "text/markdown"
+    return output
 
 #
 # Inspector
