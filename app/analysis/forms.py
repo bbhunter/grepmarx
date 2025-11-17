@@ -4,7 +4,7 @@ Copyright (c) 2021 - present Orange Cyberdefense
 """
 
 from flask_wtf import FlaskForm
-from wtforms import SelectMultipleField, TextAreaField, widgets, SelectField
+from wtforms import SelectMultipleField, TextAreaField, widgets, SelectField, SubmitField
 from wtforms.fields.simple import HiddenField
 from wtforms.validators import DataRequired
 
@@ -25,3 +25,9 @@ class ScanForm(FlaskForm):
     rule_packs = MultiCheckboxField("Rule packs", coerce=int)
     scans = MultiCheckboxField("Scans", id="scans")
     exports = MultiCheckboxField("Exports", id="exports")
+
+class MarkdownDependenciesForm(FlaskForm):
+    analysis_id = HiddenField(
+        "Analysis id", id="analysis-id", validators=[DataRequired()]
+    )
+    dependency_column = SelectMultipleField("Dependency", id="dependency")

@@ -6,6 +6,51 @@
 <link rel="stylesheet" href="/static/assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
 <link rel="stylesheet" href="/static/assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
 <link rel="stylesheet" href="/static/assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<!-- AdminLTE -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+<!-- Optionnal : Bootstrap 4 theme for Select2 (better AdminLTE integration) -->
+<link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+<style>
+/* --- SELECT2 : Dark mode only when AdminLTE is in dark mode --- */
+.dark-mode .select2-container .select2-selection--multiple {
+    background-color: #343a40 !important;
+    border: 1px solid #6c757d !important;
+    color: #fff !important;
+}
+
+.dark-mode .select2-container .select2-selection--multiple .select2-selection__choice {
+    background-color: #495057 !important;
+    border: 1px solid #6c757d !important;
+    color: #fff !important;
+}
+
+.dark-mode .select2-container .select2-search__field {
+    color: #fff !important;
+}
+
+.dark-mode .select2-dropdown {
+    background-color: #343a40 !important;
+    border: 1px solid #6c757d !important;
+}
+
+.dark-mode .select2-results__option {
+    color: #fff !important;
+}
+
+.dark-mode .select2-results__option--highlighted {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--multiple {
+    min-height: auto !important;
+    height: auto !important;
+}
+
+</style>
+
 {% endblock stylesheets %}
 
 {% block content %}
@@ -43,7 +88,7 @@
                         </a>
                     </div>
                     <div class="btn-group float-sm-right">
-                        <a class="btn btn-default" href="/analysis/{{ analysis.id }}/dependencies/export/md">
+                        <a class="btn btn-default" data-toggle="modal" data-target="#confirm-add">
                             <span class="fa-brands fa-markdown"></span>
                             Export Markdown
                         </a>
@@ -205,6 +250,37 @@
 </div>
 <!-- End VulnerableDependencyDetails modal dialog -->
 
+<!-- Modal add confirmation -->
+<div class="modal fade" id="confirm-add" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <!-- Modal overlay-->
+        <div id="overlay-modal-sync" class="overlay d-none">
+            <i class="fas fa-2x fa-plus fa-spin"></i>
+        </div>
+        <div class="modal-content bg-default">
+            <div class="modal-header">
+                <h5 class="modal-title">Chose Markdown parameters</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <form method="POST" action="/analysis/{{ analysis.id }}/dependencies/export/md">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    <select name="{{ form.dependency_column.name }}" class="form-control select2" multiple="multiple" style="width: 100%;">
+                        {% for val, id in form.dependency_column.choices %}
+                            <option value="{{ id }}" {%if val in form.dependency_column.data %} selected {% endif %}>{{ val }}</option>
+                        {% endfor %} 
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-default btn-block">
+                    <span class="fa-brands fa-markdown"></span> Download Markdown
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 
 {% block javascripts %}
@@ -214,6 +290,14 @@
 <script src="/static/assets/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
 <script src="/static/assets/plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
 <script src="/static/assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
+ <!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- AdminLTE -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+<!-- Select2 -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 {% for type in types %}
 <script type="text/javascript">
@@ -226,5 +310,12 @@
     });
 </script>
 {% endfor %}
+<script>
+$(document).ready(function() {
+    $('.select2').select2({
+        theme: 'bootstrap4'
+    });
+});
+</script>
 
 {% endblock javascripts %}

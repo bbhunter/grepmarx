@@ -253,6 +253,7 @@ def download_analysis_logs(project_id):
 @blueprint.route("/projects/<project_id>/download_sarif_export")
 @login_required
 def download_analysis_sarif_export(project_id):
+    print("HELLO ----------------")
     project = Project.query.filter_by(id=project_id).first_or_404()
     # Check if the user has access to the project
     if not has_access(current_user, project):

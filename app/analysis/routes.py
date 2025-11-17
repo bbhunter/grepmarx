@@ -28,7 +28,7 @@ from flask import make_response
 
 from app import db
 from app.analysis import blueprint
-from app.analysis.forms import ScanForm
+from app.analysis.forms import (ScanForm, MarkdownDependenciesForm)
 from app.analysis.models import (
     Analysis,
     AppInspector,
@@ -45,6 +45,8 @@ from app.analysis.util import (
     progress,
     stop_analysis,
     vulnerabilities_sorted_by_severity,
+    get_all_dep_keys,
+    create_different_dep_dict,
 )
 from app.base import util
 from app.constants import (
@@ -328,7 +330,7 @@ def analysis_occurences_table(vulnerability_id):
 #
 
 
-@blueprint.route("/analysis/dependencies/<analysis_id>")
+@blueprint.route("/analysis/dependencies/<analysis_id>", methods=['GET', 'POST'])
 @login_required
 def analysis_dependencies(analysis_id):
     analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
@@ -336,8 +338,24 @@ def analysis_dependencies(analysis_id):
     if not has_access(current_user, analysis.project):
         return render_template("403.html"), 403
     types = list({vuln.pkg_type for vuln in analysis.vulnerable_dependencies})
+
+    if not getattr(analysis, "vulnerable_dependencies", None) :
+        keys = []
+        flash("No dependencies data were found for this project during the last analysis", "error")
+    else :
+        ## get keys
+        keys = get_all_dep_keys(analysis)
+
+    choices = []
+    for key in keys:
+        choices.append((key, key))
+
+    form = MarkdownDependenciesForm(request.form, analysis_id=analysis_id)
+    form.dependency_column.choices = choices
+    form.dependency_column.data = ["common_id","pkg_ref","version","fix_version","severity","cvss_score","source_files"]
     return render_template(
         "dependencies.html",
+        form=form,
         user=current_user,
         analysis=analysis,
         types=types,
@@ -448,33 +466,107 @@ def analysis_dependencies_export_csv(analysis_id):
     output.headers["Content-type"] = "text/csv"
     return output
 
+## MD dl function 
 
-@blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
+# @blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
+# @login_required
+# def analysis_dependencies_export_md(analysis_id):
+#     analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
+#     # Check if the user has access to the project
+#     # if not has_access(current_user, analysis.project):
+#     #     return render_template("403.html"), 403
+    
+#     markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
+#                         "|----|---|--|--|--|--|--------------|\n")
+#     sorted_vulnerable_dependencies = sorted(analysis.vulnerable_dependencies, key=lambda x: float(x.cvss_score), reverse=True)
+#     for vuln_dep in sorted_vulnerable_dependencies:
+#         # remplace comma
+#         source_files = vuln_dep.source_files.replace(",", "<br>")
+
+#         # COnstruct Md table line
+#         line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
+#         markdown_content += line
+
+#     markdown_content += (f":Dépendances vulnérables")
+
+#     output = make_response(markdown_content)
+#     filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
+#     output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+#     output.headers["Content-type"] = "text/markdown"
+#     return output
+
+
+@blueprint.route("/analysis/<analysis_id>/dependencies/export/md", methods=['GET', 'POST'])
 @login_required
 def analysis_dependencies_export_md(analysis_id):
     analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
     # Check if the user has access to the project
     if not has_access(current_user, analysis.project):
         return render_template("403.html"), 403
-    
-    markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
-                        "|----|---|--|--|--|--|------|\n")
+    types = list({vuln.pkg_type for vuln in analysis.vulnerable_dependencies})
+    markdown_content = ""
+    if not getattr(analysis, "vulnerable_dependencies", None) :
+        keys = []
+        flash("No dependencies data were found for this project during the last analysis", "error")
+    else :
+        ## get keys
+        keys = get_all_dep_keys(analysis)
 
-    for vuln_dep in analysis.vulnerable_dependencies:
-        # remplace comma
-        source_files = vuln_dep.source_files.replace(",", "<br>")
+    choices = []
+    for key in keys:
+        choices.append((key, key))
 
-        # COnstruct Md table line
-        line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
-        markdown_content += line
+    form = MarkdownDependenciesForm(request.form, analysis_id=analysis_id)
+    form.dependency_column.choices = choices
+    if form.validate_on_submit():
+        dep_dict = create_different_dep_dict(analysis.vulnerable_dependencies)
+        selected_options = form.dependency_column.data
 
-    markdown_content += (f":Dépendances vulnérables")
+        for pkg_type, dep_array in dep_dict.items():
+            array_first_line = ""
+            array_second_line = ""
+            markdown_array = ""
+            line = ""
+            markdown_content += "\n## " + str(pkg_type) + "\n"
+            for  colunm in selected_options :
+                array_first_line += f"{colunm} | "
+                array_second_line += "|----"
+            else :
+                array_first_line += "\n"
+                array_second_line += "|\n"
+            markdown_array = (str(array_first_line) + str(array_second_line))
+            sorted_vulnerable_dependencies = sorted(dep_array, key=lambda x: float(x.cvss_score), reverse=True)
+            for vuln_dep in sorted_vulnerable_dependencies:
+                # remplace comma
+                if getattr(vuln_dep, "pkg_type", None) == pkg_type :
+                    # Construct Md table line
+                    line = ""
+                    for colunm in selected_options :
+                        line += "| " + str(getattr(vuln_dep, colunm, "")) + " "
+                    else : 
+                        line += "|\n"
+                    markdown_array += line
+            markdown_content += markdown_array + "\n\n"
 
-    output = make_response(markdown_content)
-    filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
-    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
-    output.headers["Content-type"] = "text/markdown"
-    return output
+        markdown_content += (f":Dépendances vulnérables")
+
+        output = make_response(markdown_content)
+        filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
+        output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        output.headers["Content-type"] = "text/markdown"
+        return output
+    print("Faild to load the MD")
+    return render_template(
+        "dependencies.html",
+        form=form,
+        user=current_user,
+        analysis=analysis,
+        types=types,
+        insights_mapping=INSIGHTS_MAPPING,
+        insights_icons=INSIGHTS_ICONS,
+        insights_colors=INSIGHTS_COLORS,
+    )
+
 
 #
 # Inspector

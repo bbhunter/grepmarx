@@ -17,7 +17,7 @@ import subprocess
 import traceback
 import redis
 
-from flask import current_app
+from flask import current_app, make_response
 
 
 from app import celery, db
@@ -63,6 +63,7 @@ from app.projects.util import (
     count_occurences,
 )
 from app.rules.util import generate_severity
+from collections import defaultdict
 
 ##
 ## Analysis utils
@@ -863,6 +864,48 @@ def md2html(string):
     return string
 
 
+# @blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
+# @login_required
+def analysis_dependencies_export_md(analysis_id):
+    analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
+    # Check if the user has access to the project
+    # if not has_access(current_user, analysis.project):
+    #     return render_template("403.html"), 403
+    
+    markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
+                        "|----|---|--|--|--|--|--------------|\n")
+    sorted_vulnerable_dependencies = sorted(analysis.vulnerable_dependencies, key=lambda x: float(x.cvss_score), reverse=True)
+    for vuln_dep in sorted_vulnerable_dependencies:
+        # remplace comma
+        source_files = vuln_dep.source_files.replace(",", "<br>")
+
+        # COnstruct Md table line
+        line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
+        markdown_content += line
+
+    markdown_content += (f":Dépendances vulnérables")
+
+    output = make_response(markdown_content)
+    filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
+    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    output.headers["Content-type"] = "text/markdown"
+    return output
+
+
+def get_all_dep_keys(analysis):
+    keys = list(analysis.vulnerable_dependencies[0].__dict__.keys())
+
+    ## Remove bad keys
+    sorted_keys = list(x for x in keys if not x.startswith("_"))
+    return sorted_keys
+
+def create_different_dep_dict(deps):
+    dep_dict = defaultdict(list)
+    for dep in deps:
+        pkg_type = getattr(dep, "pkg_type", "unknown")
+        dep_dict[pkg_type].append(dep)
+    dep_dict = dict(dep_dict)
+    return dep_dict
 ##
 ## Inspector scan utils
 ##
