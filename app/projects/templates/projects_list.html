@@ -205,6 +205,9 @@
                                                     <a href="/projects/{{ c_project.id }}" type="button" class="btn btn-default btn-sm">
                                                         <i title="Project dashboard" class="far fa-chart-bar"></i> Dashboard
                                                     </a>
+                                                    <a href="/analysis/scans/new/{{ c_project.id }}" type="button" class="btn btn-default btn-sm">
+                                                        <i title="New analysis" class="far fa-circle-play"></i> New scan
+                                                    </a>
                                                     <div class="btn-group">
                                                         <button type="button"
                                                             class="btn btn-default btn-sm dropdown-toggle dropdown-icon"
@@ -227,9 +230,6 @@
                                                                 Dependencies
                                                             </a>
                                                             <div class="dropdown-divider"></div>
-                                                            <a href="/analysis/scans/new/{{ c_project.id }}" type="button" class="dropdown-item">
-                                                                <i title="New analysis" class="far fa-circle-play"></i> New scan
-                                                            </a>
                                                 {% endif %}            
                                                             <a class="dropdown-item"
                                                                 href="/projects/{{ c_project.id }}/download_sources">
