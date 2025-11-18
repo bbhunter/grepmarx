@@ -4,7 +4,7 @@ Copyright (c) 2021 - present Orange Cyberdefense
 """
 
 from flask_wtf import FlaskForm
-from wtforms import SelectMultipleField, TextAreaField, widgets, SelectField, SubmitField
+from wtforms import SelectMultipleField, TextAreaField, widgets, SubmitField
 from wtforms.fields.simple import HiddenField
 from wtforms.validators import DataRequired
 

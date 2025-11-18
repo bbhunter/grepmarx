@@ -5,7 +5,7 @@ Copyright (c) 2021 - present Orange Cyberdefense
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import StringField, RadioField, SubmitField
+from wtforms import StringField, RadioField, SubmitField, SelectField
 from wtforms.validators import DataRequired
 
 
@@ -16,6 +16,7 @@ class ProjectForm(FlaskForm):
         id="project-source-archive",
         validators=[FileRequired(), FileAllowed(["zip"], "Zip archives only")],
     )
+    team = SelectField("team", id="team")
 
 
 class XLSExportForm(FlaskForm):

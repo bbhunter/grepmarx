@@ -54,9 +54,20 @@ from app.base.models import Team
 @login_required
 def projects_list():
     projects = Project.query.all()
-    project_form = ProjectForm()
     admin = util.is_admin(current_user.role)
     user_projects_ids = get_user_projects_ids(current_user)
+
+    # setup list 
+    project_form = ProjectForm()
+    teams = Team.query.all()
+    team_list = []
+
+    for team in teams:
+        team_list.append((team.name, team.name))
+
+    project_form.team.choices = team_list
+    project_form.team.data = "Global"
+    
     return render_template(
         "projects_list.html",
         projects=projects,
@@ -147,6 +158,14 @@ def projects_remove(project_id):
 @login_required
 def projects_create():
     project_form = ProjectForm()
+    # get team choices
+    teams = Team.query.all()
+    team_list = []
+
+    for team in teams:
+        team_list.append((team.name, team.name))
+
+    project_form.team.choices = team_list
     # Form is valid
     if project_form.validate_on_submit():
         # Create a new project
@@ -189,14 +208,14 @@ def projects_create():
         count_lines(project)
         db.session.commit()
         current_app.logger.info("New project created (project.id=%i)", project.id)
-        # Add the project to the global team
-        Global_team = Team.query.filter_by(name="Global").first()
-        Global_team_project_ids = [project.id for project in Global_team.projects]
-        Global_team_project_ids.append(project.id)
-        Global_team.projects = Project.query.filter(
-            Project.id.in_(Global_team_project_ids)
+        # Add the project to the selected team
+        Selected_team = Team.query.filter_by(name=project_form.team.data).first()
+        Selected_team_project_ids = [project.id for project in Selected_team.projects]
+        Selected_team_project_ids.append(project.id)
+        Selected_team.projects = Project.query.filter(
+            Project.id.in_(Selected_team_project_ids)
         ).all()
-        print(Global_team)
+        print(Selected_team)
         db.session.commit()
         return str(project.id), 200
     # Form is invalid
