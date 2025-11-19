@@ -47,6 +47,7 @@ from app.analysis.util import (
     vulnerabilities_sorted_by_severity,
     get_all_dep_keys,
     create_different_dep_dict,
+    sort_md_options,
 )
 from app.base import util
 from app.constants import (
@@ -468,34 +469,6 @@ def analysis_dependencies_export_csv(analysis_id):
 
 ## MD dl function 
 
-# @blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
-# @login_required
-# def analysis_dependencies_export_md(analysis_id):
-#     analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
-#     # Check if the user has access to the project
-#     # if not has_access(current_user, analysis.project):
-#     #     return render_template("403.html"), 403
-    
-#     markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
-#                         "|----|---|--|--|--|--|--------------|\n")
-#     sorted_vulnerable_dependencies = sorted(analysis.vulnerable_dependencies, key=lambda x: float(x.cvss_score), reverse=True)
-#     for vuln_dep in sorted_vulnerable_dependencies:
-#         # remplace comma
-#         source_files = vuln_dep.source_files.replace(",", "<br>")
-
-#         # COnstruct Md table line
-#         line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
-#         markdown_content += line
-
-#     markdown_content += (f":Dépendances vulnérables")
-
-#     output = make_response(markdown_content)
-#     filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
-#     output.headers["Content-Disposition"] = f"attachment; filename={filename}"
-#     output.headers["Content-type"] = "text/markdown"
-#     return output
-
-
 @blueprint.route("/analysis/<analysis_id>/dependencies/export/md", methods=['GET', 'POST'])
 @login_required
 def analysis_dependencies_export_md(analysis_id):
@@ -517,10 +490,11 @@ def analysis_dependencies_export_md(analysis_id):
         choices.append((key, key))
 
     form = MarkdownDependenciesForm(request.form, analysis_id=analysis_id)
+    export_mode = request.form.get("export_mode")
     form.dependency_column.choices = choices
     if form.validate_on_submit():
         dep_dict = create_different_dep_dict(analysis.vulnerable_dependencies)
-        selected_options = form.dependency_column.data
+        selected_options = sort_md_options(form.dependency_column.data)
 
         for pkg_type, dep_array in dep_dict.items():
             array_first_line = ""
@@ -528,7 +502,9 @@ def analysis_dependencies_export_md(analysis_id):
             markdown_array = ""
             line = ""
             markdown_content += "\n## " + str(pkg_type) + "\n"
-            for  colunm in selected_options :
+            for  option in selected_options :
+                # remove "_" from column
+                colunm = option.replace("_", " ")
                 array_first_line += f"{colunm} | "
                 array_second_line += "|----"
             else :
@@ -542,7 +518,19 @@ def analysis_dependencies_export_md(analysis_id):
                     # Construct Md table line
                     line = ""
                     for colunm in selected_options :
-                        line += "| " + str(getattr(vuln_dep, colunm, "")) + " "
+                        # if Security Reporter select
+                        if export_mode == "MDSR" and colunm == "severity":
+                            match str(getattr(vuln_dep, colunm, "")):
+                                case "low":
+                                    line += "| " + '[component="badge" type="severity-8"]' + " "
+                                case "medium":
+                                    line += "| " + '[component="badge" type="severity-9"]' + " "
+                                case "high":
+                                    line += "| " + '[component="badge" type="severity-10"]' + " "
+                                case "critical":
+                                    line += "| " + '[component="badge" type="severity-11"]' + " "
+                        else :
+                            line += "| " + str(getattr(vuln_dep, colunm, "")) + " "
                     else : 
                         line += "|\n"
                     markdown_array += line

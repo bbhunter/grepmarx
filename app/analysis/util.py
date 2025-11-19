@@ -864,34 +864,6 @@ def md2html(string):
     return string
 
 
-# @blueprint.route("/analysis/<analysis_id>/dependencies/export/md")
-# @login_required
-def analysis_dependencies_export_md(analysis_id):
-    analysis = Analysis.query.filter_by(id=analysis_id).first_or_404()
-    # Check if the user has access to the project
-    # if not has_access(current_user, analysis.project):
-    #     return render_template("403.html"), 403
-    
-    markdown_content = ("Id | Package | Version | Fix version | Severity | CVSS | Source files |\n"
-                        "|----|---|--|--|--|--|--------------|\n")
-    sorted_vulnerable_dependencies = sorted(analysis.vulnerable_dependencies, key=lambda x: float(x.cvss_score), reverse=True)
-    for vuln_dep in sorted_vulnerable_dependencies:
-        # remplace comma
-        source_files = vuln_dep.source_files.replace(",", "<br>")
-
-        # COnstruct Md table line
-        line = (f"| {vuln_dep.common_id} | {vuln_dep.pkg_ref} | {vuln_dep.version} | {vuln_dep.fix_version} | {vuln_dep.severity}  | {vuln_dep.cvss_score} | {source_files} |\n")
-        markdown_content += line
-
-    markdown_content += (f":Dépendances vulnérables")
-
-    output = make_response(markdown_content)
-    filename = f"{analysis.id}-Vulnerable-Dependencies-{analysis.project.name}.md"
-    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
-    output.headers["Content-type"] = "text/markdown"
-    return output
-
-
 def get_all_dep_keys(analysis):
     keys = list(analysis.vulnerable_dependencies[0].__dict__.keys())
 
@@ -1092,3 +1064,30 @@ def progress(analysis, progress):
     analysis.progress = progress
     analysis.progress_updated_on = datetime.now()
     db.session.commit()
+
+# Export MD Functions
+
+def sort_md_options(md_options):
+
+    sorted_options = []
+
+    if "common_id" in md_options:
+        sorted_options.append("common_id")
+        md_options.remove("common_id")
+    if "version" in md_options:
+        sorted_options.append("version")
+        md_options.remove("version")
+    if "fix_version" in md_options:
+        sorted_options.append("fix_version")
+        md_options.remove("fix_version")
+    if "severity" in md_options:
+        sorted_options.append("severity")
+        md_options.remove("severity")
+    if "cvss_score" in md_options:
+        sorted_options.append("cvss_score")
+        md_options.remove("cvss_score")
+
+    for option in md_options:
+        sorted_options.append(option)
+
+    return sorted_options
