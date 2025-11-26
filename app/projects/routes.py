@@ -62,8 +62,13 @@ def projects_list():
     teams = Team.query.all()
     team_list = []
 
-    for team in teams:
-        team_list.append((team.name, team.name))
+    if admin:
+        for team in teams:
+            team_list.append((team.name, team.name))
+    else:
+        for team in teams:
+            if current_user.username == team.creator or team.name == "Global":
+                team_list.append((team.name, team.name))
 
     project_form.team.choices = team_list
     project_form.team.data = "Global"
