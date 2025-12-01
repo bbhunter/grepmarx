@@ -21,6 +21,7 @@ services:
     restart: always
     volumes: 
       - gpx-data:/opt/grepmarx/data
+      # todo add docker socket
     #  - ./ldap-cert:/opt/grepmarx/ldap-cert/
     build: .
     links:
