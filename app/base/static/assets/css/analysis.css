@@ -1,0 +1,35 @@
+/* --- SELECT2 : Dark mode only when AdminLTE is in dark mode --- */
+.dark-mode .select2-container .select2-selection--multiple {
+    background-color: #343a40 !important;
+    border: 1px solid #6c757d !important;
+    color: #fff !important;
+}
+
+.dark-mode .select2-container .select2-selection--multiple .select2-selection__choice {
+    background-color: #495057 !important;
+    border: 1px solid #6c757d !important;
+    color: #fff !important;
+}
+
+.dark-mode .select2-container .select2-search__field {
+    color: #fff !important;
+}
+
+.dark-mode .select2-dropdown {
+    background-color: #343a40 !important;
+    border: 1px solid #6c757d !important;
+}
+
+.dark-mode .select2-results__option {
+    color: #fff !important;
+}
+
+.dark-mode .select2-results__option--highlighted {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--multiple {
+    min-height: auto !important;
+    height: auto !important;
+}
