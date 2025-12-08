@@ -312,5 +312,5 @@ def download_analysis_sarif_export(project_id):
     with open(merge_path, 'w', encoding='utf-8') as f:
         json.dump(merged_sarif, f, indent=2)
     
-    flash("All files founded and fusionned.", "success")
+    flash("SARIF files found and merged.", "success")
     return send_file(merge_path, as_attachment=True)
