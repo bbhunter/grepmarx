@@ -6,17 +6,7 @@
 <link rel="stylesheet" href="/static/assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
 <link rel="stylesheet" href="/static/assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
 <link rel="stylesheet" href="/static/assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
-<link rel="stylesheet" href="/static/assets/css/analysis.css">
-<!-- Select2 (local) -->
-<link rel="stylesheet" href="{{ url_for('static', filename='assets/select2/css/select2.min.css') }}" />
-
-<!-- AdminLTE (local) -->
-<link rel="stylesheet" href="{{ url_for('static', filename='assets/adminlte/css/adminlte.min.css') }}" />
-
-<!-- Select2 Bootstrap4 Theme (local) -->
-<link rel="stylesheet" href="{{ url_for('static', filename='assets/select2/css/select2-bootstrap4.min.css') }}" />
-
-
+<link rel="stylesheet" href="/static/assets/css/select2/select2.min.css" />
 {% endblock stylesheets %}
 
 {% block content %}
@@ -219,10 +209,6 @@
 <!-- Modal add confirmation -->
 <div class="modal fade" id="confirm-add" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
-        <!-- Modal overlay-->
-        <div id="overlay-modal-sync" class="overlay d-none">
-            <i class="fas fa-2x fa-plus fa-spin"></i>
-        </div>
         <div class="modal-content bg-default">
             <div class="modal-header">
                 <h5 class="modal-title">Chose Markdown parameters</h5>
@@ -233,11 +219,13 @@
             <form method="POST" action="/analysis/{{ analysis.id }}/dependencies/export/md">
                 {{ form.hidden_tag() }}
                 <div class="form-group">
-                    <select name="{{ form.dependency_column.name }}" class="form-control select2" multiple="multiple" style="width: 100%;">
-                        {% for val, id in form.dependency_column.choices %}
-                            <option value="{{ id }}" {%if val in form.dependency_column.data %} selected {% endif %}>{{ val }}</option>
-                        {% endfor %} 
-                    </select>
+                    <div class="select2-gray">
+                        <select name="{{ form.dependency_column.name }}" class="select2" multiple="multiple" style="width: 100%;">
+                            {% for val, id in form.dependency_column.choices %}
+                                <option value="{{ id }}" {%if val in form.dependency_column.data %} selected {% endif %}>{{ val }}</option>
+                            {% endfor %} 
+                        </select>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-default btn-block" name="export_mode" value="MD">
                     <span class="fa-brands fa-markdown"></span> Download Markdown
@@ -259,15 +247,7 @@ select2
 <script src="/static/assets/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
 <script src="/static/assets/plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
 <script src="/static/assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
-
-<!-- AdminLTE (local) -->
-<script src="{{ url_for('static', filename='assets/js/adminlte.min.js') }}"></script>
-
-<!-- jQuery (local) -->
-<script src="{{ url_for('static', filename='assets/js/jquery.min.js') }}"></script>
-
-<!-- Select2 (local) -->
-<script src="{{ url_for('static', filename='assets/select2/js/select2.min.js') }}"></script>
+<script src="/static/assets/plugins/select2/select2.min.js"></script>
 
 
 {% for type in types %}
@@ -283,9 +263,7 @@ select2
 {% endfor %}
 <script>
 $(document).ready(function() {
-    $('.select2').select2({
-        theme: 'bootstrap4'
-    });
+    $('.select2').select2();
 });
 </script>
 

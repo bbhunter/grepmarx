@@ -79,6 +79,12 @@ body {
     color: var(--orange) !important;
 }
 
+/* Specific styles for Select2 */
+.dark-mode .select2-selection {
+  background-color: #343a40 !important;
+  border-color: #6c757d !important;
+}
+
 /*
 .dataTable-selector, .dataTable-input {
     display: block;
