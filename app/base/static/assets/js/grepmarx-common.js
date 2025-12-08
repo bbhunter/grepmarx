@@ -155,6 +155,20 @@ function ajaxSyncRules() {
     reqRuleSync.send();
 }
 
+// ------------ Asynchronous project deletion
+function ajaxDeleteProject(projectId) {
+    document.getElementById('overlay-modal-delete').classList.remove('d-none');
+    document.getElementById('confirm-project-removal-button').setAttribute('disabled', 'true');
+    reqRuleSync = new XMLHttpRequest();
+    reqRuleSync.onreadystatechange = function () {
+        if (reqRuleSync.readyState === XMLHttpRequest.DONE) {
+            document.location = "/projects/remove/" + projectId;
+        }
+    };
+    reqRuleSync.open('GET', '/projects');
+    reqRuleSync.send();
+}
+
 // ------------ Modals for remove confirmation
 
 /**
@@ -167,6 +181,13 @@ function setConfirmAction(buttonId, location) {
     btn = document.getElementById(buttonId);
     btn.onclick = function () {
         document.location = location;
+    };
+}
+
+function setConfirmProjectDelete(buttonId, projectId) {
+    btn = document.getElementById(buttonId);
+    btn.onclick = function() {
+        ajaxDeleteProject(projectId);
     };
 }
 

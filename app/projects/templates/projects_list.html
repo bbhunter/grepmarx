@@ -248,7 +248,7 @@
                                                     </div>
                                                 </div>
                                                 <a class="btn btn-default btn-sm text-danger" href="#"
-                                                    onclick="setConfirmAction('confirm-project-removal-button', '/projects/remove/{{ c_project.id }}')"
+                                                    onclick="setConfirmProjectDelete('confirm-project-removal-button', {{ c_project.id }})"
                                                     data-toggle="modal" data-target="#confirm-removal">
                                                     <i title="Delete project" class="fas fa-trash"></i>
                                                 </a>
@@ -331,6 +331,10 @@
 <!-- Modal remove confirmation -->
 <div class="modal fade" id="confirm-removal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
+        <!-- Modal overlay-->
+        <div id="overlay-modal-delete" class="overlay d-none">
+            <i class="fas fa-2x fa-sync fa-spin"></i>
+        </div>
         <div class="modal-content bg-warning">
             <div class="modal-header">
                 <h5 class="modal-title">Confirm deletion</h5>
